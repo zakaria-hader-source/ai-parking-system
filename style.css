@@ -373,6 +373,26 @@ body {
     font-weight: 800;
 }
 
+/* Car Graphics */
+.car-icon {
+    width: 65%;
+    height: auto;
+    opacity: 0.9;
+    margin-bottom: 0.2rem;
+    z-index: 2;
+    color: #f8fafc;
+    transition: var(--transition);
+    transform: rotate(180deg); /* Top down view pointing up */
+}
+
+.parking-spot.vip .car-icon {
+    color: #fcd34d; /* Golden car for VIP */
+    filter: drop-shadow(0 0 5px rgba(252, 211, 77, 0.4));
+}
+
+.parking-spot:hover .car-icon {
+    transform: rotate(180deg) scale(1.1);
+}
 
 /* Floor transition animation */
 .fade-in {
