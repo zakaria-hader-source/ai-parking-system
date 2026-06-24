@@ -45,10 +45,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const autoResetTimeInput= document.getElementById('auto-reset-time');
     const autoResetStatus   = document.getElementById('auto-reset-status');
 
-    // Confirm modal
+    // Confirm modal — replaced with window.confirm for reliability
+    // (keeping DOM refs in case we re-add custom modal later)
     const confirmModal      = document.getElementById('confirm-modal');
-    const confirmTitle      = document.getElementById('confirm-title');
-    const confirmMessage    = document.getElementById('confirm-message');
     const confirmOkBtn      = document.getElementById('confirm-ok-btn');
     const confirmCancelBtn  = document.getElementById('confirm-cancel-btn');
 
@@ -71,7 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setupModeToggle();
         setupModal();
         setupResetPanel();
-        setupConfirmModal();
 
         statusText.textContent = "Connecting to Firebase...";
         await checkAndSeedDatabase();
@@ -290,11 +288,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setupResetPanel() {
         resetAllBtn.addEventListener('click', () => {
-            showConfirm(
-                'Reset All Spots?',
-                'This will mark all 320 parking spots as <strong>free</strong> and save current sessions to history.',
-                () => performResetAll('Manual reset by operator')
-            );
+            const yes = window.confirm('Reset ALL parking spots to free?\nThis will save active sessions to history.');
+            if (yes) performResetAll('Manual reset by operator');
         });
 
         autoResetToggle.addEventListener('change', () => {
@@ -323,24 +318,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function performResetAll(reason) {
+        console.log('[Reset] Starting reset, reason:', reason);
         const now = Date.now();
+
+        // Read directly from Firebase so we always have fresh data
+        // regardless of what state.floors contains
+        const snap = await db.ref('floors').once('value');
+        if (!snap.exists()) {
+            console.warn('[Reset] No floors data found in Firebase.');
+            return;
+        }
+
+        const floorsData = snap.val();
+        console.log('[Reset] Floors data loaded:', Object.keys(floorsData));
+
         const updates = {};
 
-        // Firebase returns data as plain objects (not arrays), even if stored as arrays.
-        // Use Object.entries so this works regardless of the data shape.
-        [1, 2, 3, 4].forEach(floorNum => {
-            const floor = state.floors[floorNum];
+        Object.entries(floorsData).forEach(([floorNum, floor]) => {
             if (!floor || typeof floor !== 'object') return;
 
             Object.entries(floor).forEach(([index, spot]) => {
-                if (!spot) return;
+                if (!spot || typeof spot !== 'object') return;
 
-                // Get existing history — Firebase may return it as an object too
                 const rawHistory = spot.history;
-                const history = rawHistory
-                    ? Object.values(rawHistory)
-                    : [];
-
+                const history = rawHistory ? Object.values(rawHistory) : [];
                 let updatedHistory = history;
 
                 if (spot.status === 'occupied' && spot.arrivedAt) {
@@ -353,13 +354,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     updatedHistory = [...history, entry].slice(-10);
                 }
 
-                updates[`floors/${floorNum}/${index}/status`]   = 'free';
+                updates[`floors/${floorNum}/${index}/status`]    = 'free';
                 updates[`floors/${floorNum}/${index}/arrivedAt`] = null;
                 updates[`floors/${floorNum}/${index}/history`]   = updatedHistory;
             });
         });
 
+        const numSpots = Object.keys(updates).length / 3;
+        console.log(`[Reset] Writing ${numSpots} spot updates to Firebase...`);
+
         await db.ref('/').update(updates);
+        console.log('[Reset] Done!');
         showResetFlash();
     }
 
@@ -368,13 +373,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const hour = parseInt(h);
         const suffix = hour >= 12 ? 'PM' : 'AM';
         const display12 = ((hour % 12) || 12) + ':' + m + ' ' + suffix;
-
-        showConfirm(
-            `⏰ Scheduled Reset at ${display12}`,
-            `The automatic nightly reset has triggered. All spots will be cleared and sessions saved to history.`,
-            () => performResetAll(`Auto-reset at ${state.autoResetTime}`),
-            true // auto-confirm after 10s
-        );
+        const yes = window.confirm(`⏰ Scheduled auto-reset at ${display12}\nReset all spots now?`);
+        if (yes) performResetAll(`Auto-reset at ${state.autoResetTime}`);
     }
 
     // Flash the grid to signal a successful reset
@@ -383,52 +383,21 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => gridContainer.classList.remove('reset-flash'), 700);
     }
 
-    // ─── Confirm Modal ────────────────────────────────────────────────────────────
+    // ─── Confirm Modal (kept in DOM but not used — replaced by window.confirm) ─────
 
     let autoConfirmTimer = null;
 
     function setupConfirmModal() {
-        confirmOkBtn.addEventListener('click', () => {
-            closeConfirmModal();
-            if (pendingConfirmCallback) pendingConfirmCallback();
-        });
-        confirmCancelBtn.addEventListener('click', closeConfirmModal);
-        confirmModal.addEventListener('click', (e) => {
-            if (e.target === confirmModal) closeConfirmModal();
-        });
+        // no-op — using window.confirm instead
     }
 
-    function showConfirm(title, message, onOk, autoConfirm = false) {
-        confirmTitle.textContent   = title;
-        confirmMessage.innerHTML   = message;
-        pendingConfirmCallback     = onOk;
-        confirmModal.classList.remove('hidden');
-
-        if (autoConfirm) {
-            let countdown = 10;
-            confirmOkBtn.textContent = `Reset Now (${countdown}s)`;
-            autoConfirmTimer = setInterval(() => {
-                countdown--;
-                confirmOkBtn.textContent = countdown > 0
-                    ? `Reset Now (${countdown}s)`
-                    : 'Reset Now';
-                if (countdown <= 0) {
-                    clearInterval(autoConfirmTimer);
-                    closeConfirmModal();
-                    if (pendingConfirmCallback) pendingConfirmCallback();
-                }
-            }, 1000);
-        }
+    function showConfirm(title, message, onOk) {
+        // fallback — not currently called
+        if (window.confirm(title + '\n' + message.replace(/<[^>]+>/g, ''))) onOk();
     }
 
     function closeConfirmModal() {
-        confirmModal.classList.add('hidden');
-        confirmOkBtn.textContent = 'Reset Now';
-        if (autoConfirmTimer) {
-            clearInterval(autoConfirmTimer);
-            autoConfirmTimer = null;
-        }
-        pendingConfirmCallback = null;
+        // no-op
     }
 
     // ─── Report Modal ─────────────────────────────────────────────────────────────
