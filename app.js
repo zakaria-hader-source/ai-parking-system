@@ -225,7 +225,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let free = 0, occupied = 0;
         Object.values(state.floors).forEach(floor => {
             if (!floor) return;
-            floor.forEach(spot => {
+            // Firebase returns objects not arrays — use Object.values for safety
+            Object.values(floor).forEach(spot => {
                 if (!spot) return;
                 spot.status === 'free' ? free++ : occupied++;
             });
@@ -325,18 +326,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const now = Date.now();
         const updates = {};
 
-        // Build flat update for every spot across all floors
+        // Firebase returns data as plain objects (not arrays), even if stored as arrays.
+        // Use Object.entries so this works regardless of the data shape.
         [1, 2, 3, 4].forEach(floorNum => {
             const floor = state.floors[floorNum];
-            if (!Array.isArray(floor)) return;
+            if (!floor || typeof floor !== 'object') return;
 
-            floor.forEach((spot, index) => {
+            Object.entries(floor).forEach(([index, spot]) => {
                 if (!spot) return;
-                const history = Array.isArray(spot.history) ? spot.history : [];
+
+                // Get existing history — Firebase may return it as an object too
+                const rawHistory = spot.history;
+                const history = rawHistory
+                    ? Object.values(rawHistory)
+                    : [];
+
                 let updatedHistory = history;
 
                 if (spot.status === 'occupied' && spot.arrivedAt) {
-                    // Save this session to history before clearing
                     const entry = {
                         arrivedAt: spot.arrivedAt,
                         leftAt: now,
@@ -346,9 +353,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     updatedHistory = [...history, entry].slice(-10);
                 }
 
-                updates[`floors/${floorNum}/${index}/status`]    = 'free';
-                updates[`floors/${floorNum}/${index}/arrivedAt`]  = null;
-                updates[`floors/${floorNum}/${index}/history`]    = updatedHistory;
+                updates[`floors/${floorNum}/${index}/status`]   = 'free';
+                updates[`floors/${floorNum}/${index}/arrivedAt`] = null;
+                updates[`floors/${floorNum}/${index}/history`]   = updatedHistory;
             });
         });
 
