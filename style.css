@@ -480,9 +480,28 @@ body.manual-mode .report-btn {
     padding-bottom: 1rem;
 }
 
-.modal-header h2 {
+.modal-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.modal-title-group h2 {
     font-size: 1.2rem;
     color: var(--text-primary);
+}
+
+.modal-spot-badge {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 20px;
+    padding: 0.15rem 0.6rem;
+    display: inline-block;
+    width: fit-content;
 }
 
 .close-btn {
@@ -492,29 +511,37 @@ body.manual-mode .report-btn {
     font-size: 1.5rem;
     cursor: pointer;
     transition: var(--transition);
+    line-height: 1;
+    padding: 0.2rem 0.4rem;
+    border-radius: 6px;
 }
 
 .close-btn:hover {
     color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
 }
 
 .modal-body h3 {
     font-size: 0.9rem;
     color: var(--text-secondary);
     margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .current-status-box {
     background: rgba(0, 0, 0, 0.2);
-    padding: 1rem;
+    padding: 1rem 1.25rem;
     border-radius: 8px;
     margin-bottom: 1.5rem;
+    border-left: 3px solid #3b82f6;
 }
 
 #modal-current-duration {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 600;
     color: #3b82f6;
+    line-height: 1.5;
 }
 
 body.manual-mode #modal-current-duration {
@@ -523,18 +550,70 @@ body.manual-mode #modal-current-duration {
 
 .history-box ul {
     list-style: none;
-    max-height: 200px;
+    max-height: 260px;
     overflow-y: auto;
+    padding-right: 2px;
+}
+
+.history-box ul::-webkit-scrollbar {
+    width: 4px;
+}
+.history-box ul::-webkit-scrollbar-track {
+    background: transparent;
+}
+.history-box ul::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
 }
 
 .history-box li {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
     background: rgba(255, 255, 255, 0.03);
     padding: 0.75rem;
-    border-radius: 6px;
+    border-radius: 8px;
     margin-bottom: 0.5rem;
-    font-size: 0.85rem;
+    border-left: 3px solid #334155;
+    transition: background 0.2s;
+}
+
+.history-box li:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.history-entry-num {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+    min-width: 24px;
+    padding-top: 2px;
+}
+
+.history-entry-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.history-duration {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.history-times {
+    font-size: 0.75rem;
     color: var(--text-secondary);
-    border-left: 3px solid #64748b;
+}
+
+.history-empty {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 1.5rem 1rem !important;
+    border-left: none !important;
+    display: block !important;
 }
 
 /* Floor transition animation */
